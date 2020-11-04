@@ -1,0 +1,1329 @@
+
+
+/**
+
+@Info {
+    Made for Khantober | 2020
+    Longest Project (1000+)
+    
+    Thank you Chester Banks for
+    hosting Khantober 2020! It's
+    been a great experience.
+    
+    Sorry if it's a bit laggy. If
+    a lot of people are saying it's
+    lagging I'll add a delag bool.
+    
+    And yes, the levels are very
+    hard. Sorry about that lol
+}
+@Credits {
+    Ibraheem Ahmed (IA) (@IbraheemIA) - Credit for all code, syntax, ideas, and comments unless stated otherwise
+    Lone Ninja/TEE (@LoneNinjaStudios) - Credit for collision code, borrowed and modified by me
+    Iron Programming (@ncochran2) - Credit for image loading and image caching function
+    KWC (@MKaelin368) - Credit for the `new__` function that replaces the keword `new`
+    JP (@jp007est.1776) - Credit for beta testing and giving me some tips on making the game better
+}
+@Log {
+    October 20 - Started basic block constructors with solid, one-color graphics. Created `block__.` object and scenes. Debugged a bit and created program frame.
+    
+    October 21 - Created a few more blocks, made better graphics. Created player constructor. Started tinkering with collisions.
+    
+    October 22 - Began working on player methods. Added `loadLevel` function with loops to draw objects. Started on a camera and made a bitmap.
+    
+    October 23 - Finished all blocks and added a collision system. Finished camera system. Added a healthbar. Worked on player and block interaction.
+    
+    October 24 - Worked on overall graphics, created them, scrapped a few ideas, kept some.
+    
+    October 25 - Finished game graphics with loading and caching. Finished player and block interaction.
+    
+    October 26 - Added juicing, improved player movement, and transitions. Finished mostly everything.
+    
+    October 27 - Fixed some major bugs. Improved the looping system and fixed a lot of the game logic.
+    
+    October 31 - Patched and Released!
+}
+@NewLevels {
+
+    Here is the key for making a 
+    level:
+        b - basic
+        z - trampoline
+        ^ - spike
+        > - speed (right)
+        < - speed (left)
+        T - sign
+        @ - portal
+        P - spawn point
+        i - ice
+        l - lava
+        s - sticky
+        
+    copy-paste the following into the t&t thread
+    (include the three dash thingies at the end
+    and the beginning)
+    
+    ```{
+        title : "your title",
+        messages : [], // messages go from top to bottom, left to right on the signs
+        map : [
+            "bbbbbbbbbbbbbbbbbbbb",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "bbbbbbbbbbbbbbbbbbbb",
+        ],
+    },```
+}
+
+//**/
+
+// -- Globals -- {
+var camX, camY;
+var levelNum = 1;
+var scene = "load";
+var player = Object;
+var opac = 300;
+var totalSec = 0, deaths = 0;
+var imgsLoaded = 0, imgsTotal = 9;
+//}
+// -- New Function -- {
+var new__ = (0 || function() {
+    var obj = Object.create(this.prototype);
+    this.apply(obj, arguments);
+    return obj;
+});
+//}
+// -- Handle Keys -- {
+var keys = [];
+var restarted = false;
+keyPressed = function () {
+    keys[keyCode] = true;
+    // '=' key
+    if(keyCode === 187){
+        scene = 'thumb';
+    }
+};
+keyReleased = function () {
+    keys[keyCode] = undefined;
+};
+keyTyped = function () {
+    if(key.toString() === 'r' || key.toString() === 'R'){
+        restarted = true;
+    }
+};
+//}
+// -- Rect Collisions -- {
+function rrCol (obj1, obj2) {
+    return (
+        (obj1.x + obj1.w) > (obj2.x         ) &&
+        (obj1.x         ) < (obj2.x + obj2.w) &&
+        (obj1.y + obj1.h) > (obj2.y         ) &&
+        (obj1.y         ) < (obj2.y + obj2.h)
+    );
+}
+//}
+// -- Transitions -- {
+function Transition (onTrans) {
+    this.opac = 0;
+    this.onTrans = onTrans;
+}
+Transition.prototype.run = function () {
+    fill(255, this.opac);
+    rectMode(CORNER);
+    rect(0, 0, width, height);
+    if (this.opac < 255) {
+        this.opac += 5;
+    } else
+    if (this.opac === 255) {
+        this.opac = 0;
+        this.onTrans();
+    }
+};
+var portalTrans = new__.call(Transition, function () {
+    opac = 300;
+    levelNum++;
+    player.x = undefined;
+    player.y = undefined;
+    player.health = 100;
+});
+//}
+// -- Thumbnail -- {
+function thumbnail () {
+    pushMatrix();
+    translate(300, 300);
+    scale(1.22);
+    translate(-300, -300);
+    noStroke();
+    noFill();
+    strokeWeight(1);
+    strokeCap(ROUND);
+    background(255);
+    rectMode(CENTER);
+    pushMatrix();
+    translate(400, 300);
+    scale(0.77);
+    rotate(12);
+    fill(0, 185, 255);
+    rect(0, 0, 400, 400, 50);
+    fill(0);
+    ellipse(-70, -115, 40, 40);
+    ellipse(110, -115, 40, 40);
+    popMatrix();
+    
+    pushMatrix();
+    stroke(0);
+    strokeWeight(3);
+    line(20, 200, 235, 200);
+    line(40, 250, 215, 250);
+    line(35, 320, 200, 320);
+    
+    strokeWeight(2);
+    line(40, 193, 240, 193);
+    line(30, 255, 205, 255);
+    line(30, 315, 195, 315);
+    line(60, 360, 195, 360);
+    
+    strokeWeight(1);
+    line(25, 204, 218, 204);
+    line(40, 312, 211, 312);
+    line(70, 356, 184, 356);
+    line(45, 364, 184, 364);
+    popMatrix();
+    
+    popMatrix();
+    rectMode(CORNER);
+}
+//}
+// -- Player Constructor -- {
+var Player = function (config) {
+    // health
+    this.health = config.health || 100;
+    // graphics
+    this.x = config.x;
+    this.y = config.y;
+    this.w = config.w || 28;
+    this.h = config.h || 28;
+    // physics
+    this.yVel = 0;
+    this.xVel = 0;
+    this.xFrict = config.friction || 1.04;
+    this.maxVel = config.maxVel || 3.5;
+    this.spdAccl = config.acceleration || 0.3;
+    this.jumpStrength = config.jumpStrength || -4.3;
+    this.gravity = config.gravity || 0.1;
+    // jumps
+    this.canJump = true;
+    this.forceJump = false;
+    this.jumping = false;
+    this.jumpStart = 0;
+    // movement
+    this.forceRight = config.forceRight || false;
+    this.forceLeft = config.forceLeft || false;
+    this.collStick = false;
+};
+//}
+// -- Player Methods --  {
+Player.prototype.move = function () {
+    if(keys[RIGHT] || keys[68]){
+        if(this.xVel < this.maxVel) {
+            this.xVel += this.spdAccl;
+        }
+    } else 
+    if(keys[LEFT] || keys[65]){
+        if(this.xVel > -this.maxVel) {
+            this.xVel -= this.spdAccl;
+        }
+    }
+    if (this.forceRight) {
+        if(this.xVel < (this.maxVel + 1)) {
+            this.xVel += this.spdAccl;
+        }
+    } else 
+    if (this.forceLeft) {
+        if(this.xVel > (-this.maxVel - 1)) {
+            this.xVel -= this.spdAccl;
+        }
+    }
+    if(
+        ((keys[UP] || keys[87] || keys[32]) && 
+        this.canJump) ||  this.forceJump
+    ){
+        if(!this.jumping){
+            this.jumpStart = frameCount;
+            this.jumping = true;
+            this.yVel = 0;
+        }
+        if(this.jumping && frameCount - this.jumpStart < 10){
+            this.yVel += this.jumpStrength/10;
+        }
+    }
+    this.x += this.xVel;
+    this.y += this.yVel;
+    if(this.xVel < this.maxVel || !(keys[LEFT] || keys[RIGHT] || keys[68] || keys[65]) || this.collStick){
+        if(!(this.forceLeft || this.forceRight)){
+            this.xVel /= this.xFrict;
+        }
+    }
+    this.yVel += this.gravity;
+    this.jumping = true;
+};
+Player.prototype.collEff = function (obj) {
+    this.forceRight = false;
+    this.forceLeft = false;
+    this.forceJump = false;
+    this.jumpStrength = -4.3;
+    this.canJump = true;
+    this.xFrict = 1.04;
+    this.speedAccl = 0.3;
+    this.maxVel = 3.5;
+    this.collStick = false;
+    switch (obj.blockType) {
+        case 'sticky':
+            this.xFrict = 1.4;
+            this.canJump = false;
+            this.collStick = true;
+        break;
+        case 'spike':
+            this.health -= 20;
+            this.forceJump = true;
+        break;
+        case 'lava':
+            this.health -= 2;
+        break;
+        case 'portal':
+            portalTrans.run();
+        break;
+        case 'sign':
+            if(opac <= 50){
+                obj.displayMessage();
+            }
+        break;
+        case 'ice':
+            this.xFrict = 1.01;
+            this.speedAccl = 0.3;
+            this.maxVel = 4;
+        break;
+        case 'bouncy':
+            this.forceJump = true;
+            this.jumpStrength = -5.5;
+        break;
+        case 'rspeed':
+            this.forceRight = true;
+        break;
+        case 'lspeed':
+            this.forceLeft = true;
+        break;
+    }
+};
+Player.prototype.collide = function (obj) {
+    if(rrCol(this, obj)){
+        this.collEff(obj);
+    }
+    if(rrCol(this, obj) && obj.runColl){
+        var xChange = min(
+            Math.abs((obj.x + obj. w) - this.x), 
+            Math.abs((obj.x - this.w) - this.x)
+        );
+        var yChange = min(
+            Math.abs((obj.y + obj. h) - this.y) + 4, 
+            Math.abs((obj.y - this.h) - this.y)
+        );
+        if(xChange <= yChange){
+            if(Math.abs((obj.x - this.w) - this.x) === xChange){
+                this.x = obj.x - this.w;
+            } else {
+                this.x = obj.x + obj.w;
+            }
+        }
+        else {
+            if(Math.abs((obj.y - this.h) - this.y) === yChange){
+                this.y = obj.y - this.h;
+                this.yVel /= 1.3;
+                this.jumping = false;
+            }
+            else {
+                this.y = obj.y + obj.h;
+                this.yVel = abs(this.yVel / 1.05);
+            }
+        }
+    }
+};
+Player.prototype.draw = function () {
+    noStroke();
+    pushMatrix();
+    translate(this.x, this.y);
+    scale(this.w / 28, this.h / 28);
+    fill(0, 185, 255);
+    rect(0, 0, 28, 28, 5);
+    fill(0);
+    ellipse(8 + this.xVel * 2 / 3, 7 + this.yVel / 2, 5, 5);
+    ellipse(20 + this.xVel * 2 / 3, 7 + this.yVel / 2, 5, 5);
+    popMatrix();
+};
+Player.prototype.reset = function (pos) {
+    this.xVel = 0;
+    this.yVel = 0;
+    this.canJump = true;
+    this.forceJump = false;
+    this.forceRight = false;
+    this.forceLeft = false;
+    this.jumping = false;
+    this.jumpStart = 0;
+    this.x = pos[0];
+    this.y = pos[1];
+};
+var player = new__.call(Player, Object);
+//}
+// -- Block Graphics -- {
+var Graphics = (function() {
+    var cache = Object.create(null), 
+    imgs_to_load = [], 
+    onloadcomplete,
+    cur_load = 0,
+    factories = {
+        basic : function () {
+            rectMode(CORNER);
+            noStroke();
+            fill(100);
+            rect(0, 0, 30, 30);
+            for(var i = 0; i < 10; i ++){
+                fill(i * 5 + 100);
+                rect(0, 0, 30 - i * 2, 30 - i * 2);
+            }
+            return get(0, 0, 30, 30);
+        },
+        sticky : function () {
+            rectMode(CORNER);
+            noStroke();
+            fill(196, 28, 230);
+            rect(0, 0, 30, 30);
+            fill(217, 79, 245);
+            rect(0, 0, 30, 30 / 4);
+            var w = 6;
+            for(var i = 0; i <= 30 - w; i += w){
+                rect(i, 0, w, 15 + sin(i * 17) * 6, 0, 0, 5, 5);
+            }
+            return get(0, 0, 30, 30);
+        },
+        lava : function () {
+            rectMode(CORNER);
+            noStroke();
+            fill(200, 0, 0);
+            rect(0, 0, 30, 30);
+            fill(250, 0, 0);
+            ellipse(11, 11, 30 / 4, 30 / 4);
+            ellipse(21, 16, 6, 6);
+            ellipse(13, 21, 5, 5);
+            return get(0, 0, 30, 30);
+        },
+        spike : function () {
+            rectMode(CORNER);
+            background(255, 0);
+            noStroke();
+            fill(175);
+            triangle(0, 30, 10, 30, 5, 0);
+            pushMatrix();
+            translate(10, 0);
+            triangle(0, 30, 10, 30, 5, 0);
+            translate(10, 0);
+            triangle(0, 30, 10, 30, 5, 0);
+            popMatrix();
+            return get(0, 0, 30, 30);
+        },
+        sign : function () {
+            rectMode(CORNER);
+            noStroke();
+            background(255, 0);
+            fill(194, 133, 19);
+            rect(12, 0, 30 / 5, 30);
+            rect(0, 0, 30, 18);
+            fill(0);
+            rect(4, 4, 10, 2);
+            rect(16, 4, 10, 2);
+            rect(4, 8, 16, 2);
+            rect(22, 8, 4, 2);
+            rect(4, 12, 6, 2);
+            rect(12, 12, 14, 2);
+            return get(0, 0, 30, 30);
+        },
+        ice : function () {
+            rectMode(CORNER);
+            background(255, 0);
+            noStroke();
+            fill(104, 217, 252);
+            stroke(173, 244, 255);
+            strokeWeight(3);
+            rect(1, 1, 28, 28, 5);
+            noStroke();
+            fill(173, 244, 255, 200);
+            
+            pushMatrix();
+            translate(10, 10);
+            rotate(10);
+            translate(-8, -8);
+            quad(10, 0, 14, 0, 0, 14, 0, 10);
+            popMatrix();
+            
+            pushMatrix();
+            translate(20, 10);
+            rotate(10);
+            translate(-8, -8);
+            quad(10, 0, 16, 0, -10, 26, -10, 20);
+            popMatrix();
+            return get(0, 0, 30, 30);
+        },
+        bouncy : function () {
+            rectMode(CORNER);
+            noStroke();
+            background(255, 0);
+            rectMode(CENTER);
+            fill(0);
+            pushMatrix();
+            translate(15, 19);
+            rotate(23);
+            rect(0, -1, 30, 3, 2);
+            rotate(-(23 * 2));
+            rect(0, -1, 30, 3, 2);
+            popMatrix();
+            rectMode(CORNER);
+            fill(255, 100, 150);
+            rect(0, 0, 30, 15, 5);
+            fill(0);
+            rect(0, 23, 30, 7, 5, 5, 0, 0);
+            return get(0, 0, 30, 30);
+        },
+        rspeed : function () {
+            rectMode(CORNER);
+            noStroke();
+            fill(245, 182, 24);
+            rect(0, 0, 30, 30);
+            fill(255, 150);
+            triangle(0, 5, 0, 25, 30, 15);
+            fill(255, 100);
+            rect(0, 0, 30, 5);
+            rect(0, 25, 30, 5);
+            return get(0, 0, 30, 30);
+        },
+        lspeed : function () {
+            rectMode(CORNER);
+            noStroke();
+            fill(245, 182, 24);
+            rect(0, 0, 30, 30);
+            fill(255, 150);
+            triangle(30, 5, 30, 25, 0, 15);
+            fill(255, 100);
+            rect(0, 0, 30, 5);
+            rect(0, 25, 30, 5);
+            return get(0, 0, 30, 30);
+        },
+    };
+    return {
+        get: function(img_name) {
+            if (img_name in cache) {
+                return cache[img_name];
+            }
+            return (cache[img_name] = factories[img_name]()); 
+        },
+        setLoadQueue: function(arr, func) {
+            imgs_to_load = arr;
+            onloadcomplete = func;
+        },
+        loadNext: function() {
+            if (cur_load < imgs_to_load.length) {
+                this.get(imgs_to_load[cur_load]);
+                factories[imgs_to_load[cur_load]] = null;
+                cur_load++;
+                imgsLoaded++;
+            } else {
+                if (typeof onloadcomplete === "function") {
+                    onloadcomplete();
+                    onloadcomplete = void 0;
+                }
+                imgs_to_load.length = 0;
+                cur_load = 0;
+            }
+        }
+    };
+})();
+Graphics.setLoadQueue(
+    ["basic", "sticky", "lava", "spike", "sign", "ice", "bouncy", "rspeed", "lspeed"],
+    function () {
+        scene = "game";
+    }
+);
+//}
+// -- Block Constructors -- {
+function BlockConstr (config) {
+    this.obj = config;
+    this.x = config.x;
+    this.y = config.y;
+    this.w = config.w || 30;
+    this.h = config.h || 30;
+    this.clr = config.clr;
+    this.stroke = config.stroke;
+    this.runColl = this.runColl || true;
+}
+BlockConstr.prototype.draw = function () {
+    image(
+        Graphics.get(this.blockType), 
+        this.x, this.y, this.w, this.h
+    );
+};
+function inhBlock (obj) {
+    obj.prototype = Object.create(BlockConstr.prototype);
+}
+function BasicBlock (config) {
+    BlockConstr.call(this, config);
+    this.blockType = 'basic';
+} inhBlock(BasicBlock);
+function StickyBlock (config) {
+    BlockConstr.call(this, config);
+    this.blockType = 'sticky';
+} inhBlock(StickyBlock);
+function LavaBlock (config) {
+    BlockConstr.call(this, config);
+    this.blockType = 'lava';
+    this.runColl = false;
+} inhBlock(LavaBlock);
+function SpikeBlock (config) {
+    BlockConstr.call(this, config);
+    this.blockType = 'spike';
+} inhBlock(SpikeBlock);
+function PortalBlock (config) {
+    BlockConstr.call(this, config);
+    this.blockType = 'portal';
+    this.runColl = false;
+} inhBlock(PortalBlock);
+function SignBlock (config) {
+    BlockConstr.call(this, config);
+    this.blockType = 'sign';
+    this.message = '';
+    this.runColl = false;
+} inhBlock(SignBlock);
+function IceBlock (config) {
+    BlockConstr.call(this, config);
+    this.blockType = 'ice';
+} inhBlock(IceBlock);
+function BouncyBlock (config) {
+    BlockConstr.call(this, config);
+    this.blockType = 'bouncy';
+} inhBlock(BouncyBlock);
+function RSpeedBlock (config) {
+    BlockConstr.call(this, config);
+    this.blockType = 'rspeed';
+} inhBlock(RSpeedBlock);
+function LSpeedBlock (config) {
+    BlockConstr.call(this, config);
+    this.blockType = 'lspeed';
+} inhBlock(LSpeedBlock);
+var block__ = {
+    basic : BasicBlock,
+    sticky : StickyBlock,
+    lava : LavaBlock,
+    spike : SpikeBlock,
+    portal : PortalBlock,
+    sign : SignBlock,
+    ice : IceBlock,
+    bouncy : BouncyBlock,
+    rspeed : RSpeedBlock,
+    lspeed : LSpeedBlock,
+};
+//}
+// -- Block Methods -- {
+PortalBlock.prototype.draw = function () {
+    noStroke();
+    for(var i = 0; i < 10; i ++){
+        fill(255, 15);
+        ellipse(
+            this.x + this.w / 2,
+            this.y + this.h / 2,
+            this.w * 2 - i * 8,
+            this.h * 2 - i * 8
+        );
+        fill(lerpColor(
+            color(11, 148, 222),
+            color(0, 34, 255),
+            i / 10
+        ), (opac < 50 ? (30 + sin(frameCount * 6) * 7) : 30));
+        ellipse(
+            this.x + this.w / 2, 
+            this.y + this.h / 2, 
+            this.w - i * 4 - 4, 
+            this.h - i * 4 - 4
+        );
+    }
+};
+SignBlock.prototype.displayMessage = function () {
+    fill(0, 55);
+    rect(0, 0, 600, 600);
+    textAlign(CENTER, CENTER);
+    textFont(createFont('verdana'), 40);
+    var smoothness = 5;
+    for(var i = 0; i < smoothness * 4; i ++){
+        fill(0, 100);
+        text(
+            this.message,
+            300 + sin(i * 360 / (smoothness * 4)) * 3,
+            300 + cos(i * 360 / (smoothness * 4)) * 3
+        );
+    }
+    fill(255);
+    text(this.message, 300, 300);
+};
+//}
+// -- Healthbar Function -- {
+function healthbar (percentile) {
+    percentile = constrain(percentile, 0, 100);
+    noStroke();
+    fill(175);
+    rect(50 + percentile * 5, 15, 500 - percentile * 5, 34, 0, 17, 17, 0);
+    if(percentile <= 50){
+        fill(lerpColor(
+            color(255, 100, 0),
+            color(255, 255, 0),
+            percentile / 50
+        ));
+    } else
+    if(percentile <= 100) {
+        fill(lerpColor(
+            color(255, 255, 0),
+            color(0, 255, 0),
+            percentile / 50
+        ));
+    }
+    if(percentile === 100) {
+        rect(50, 15, percentile * 5, 34, 17);
+    } else {
+        rect(50, 15, percentile * 5, 34, 17, 0, 0, 17);
+    }
+    fill(0, 20);
+    rect(54, 15, 493, 10, 5, 5, 0, 0);
+    strokeWeight(3);
+    stroke(0);
+    noFill();
+    rect(50, 15, 500, 34, 17);
+}
+//}
+// -- Bitmaps -- {
+var levels = [
+    /** ALL USER MADE LEVELS BELOW **/
+    /*
+    {
+    title : "Pixel Perfect",
+    messages : [], // messages go from top to bottom, left to right on the signs
+    map : [
+        "bbbbbbbbbbbbbbbbbbbb",
+        "b                  b",
+        "b                  b",
+        "b                  b",
+        "b                  b",
+        "b                  b",
+        "b                  b",
+        "b                  b",
+        "b                  b",
+        "b                  b",
+        "b                  b",
+        "b                  b",
+        "b                  b",
+        "b                  b",
+        "b                  b",
+        "b    ^^^^^^^       b",
+        "b    bbbbbbb       b",
+        "b    bll llb       b",
+        "b    bPl@llb       b",
+        "bbbbbbbb>bbbbbbbbbbb",
+    ],
+},
+    */ // Author: Retro Turtle
+    /* {
+        title : "Vertikal",
+        messages : ["\"Hi there.\" - J. Wintres", "Just passing by?"], // messages go from top to bottom, left to right on the signs
+        map : [
+            "bbbbbbbbbbbbbbbbbbbb",
+            "b      P  T        b",
+            "bbbbbbbbbbbbbbbbb  b",
+            "b                  b",
+            "b      <<<<<<<<<<<<b",
+            "b     <bbbbbbbbbbbbb",
+            "b          T       b",
+            "b>>>>iiiiiiiii     b",
+            "bbbbbbbbbbbbbb>    b",
+            "b               bllb",
+            "b              bbbbb",
+            "b             bbbbbb",
+            "b      ^^          b",
+            "b  bbbbbbzssssssbbbb",
+            "b bbbbbbbbbbllbbbbbb",
+            "b                  b",
+            "bbbb               b",   
+            "bbbbbbbbbbbbzzbbb  b",
+            "b                  b",
+            "b  iiiiiiiiiiii<<<<b",
+            "b iibbbbbbbbbbbbbbbb",               
+            "b                  b",  
+            "b                  b",               
+            "b>>>>              b",
+            "bbbb>>             b",
+            "bbbbbb>           @b",
+            "bbbbbbb>>iiiiiiiiibb",
+        ],
+    }, */ // Author: Johnathan Wintres
+    /* {
+        title : "Damage Boost",
+        messages : [],
+        map : [
+            "bbbbbbbbbbbbbbbbbbbb",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b     bbbbbbbb     b",
+            "b     b   b  b     b",
+            "b   bbl b b  b     b",
+            "b   bl bb b  b     b",
+            "b   bPbbb l @b     b",
+            "bbbbbbbbbb>lbbbbbbbb",
+        ],
+    }, */ // Author: Retro Turtle
+    /* {
+        title : "Upward and Onward ",
+        messages : ["Don't lose courage!"], // messages go from top to bottom, left to right on the signs
+        map : [
+            "bbbbbbbbbbbbbbbbbbbb",
+            "b                  b",
+            "b                  b",
+            "b@<bb     iiiiii   b",
+            "b                 zb",
+            "b                  b",
+            "b               zbbb",
+            "b                  b",
+            "b          z       b",
+            "b      i           b",
+            "b   >              b",
+            "bb                 b",
+            "b  <               b",
+            "b    ^<s^ssb      Tb",
+            "b             bbbbbb",
+            "b       i  i       b",
+            "b     i            b",
+            "b   i              b",
+            "b z                b",
+            "bbbbbbbbbbbbbbbbbbbb",
+        ],
+    }, */ // Author: Samwise
+    /* {
+        title : "Greetings from VelociBlueraptor",
+        messages : ["Hello, I am\nVelociBlueraptor", 
+"Watch out for\nspikes and lava!"],
+        map : [
+            "bbbbbbbbbbbbbbbbbbbb",
+            "b                  b",
+            "b@                 b",
+            "bb    b   b        b",
+            "blbbbllllllllllb   b",
+            "b                  b",
+            "b  biiiiiiiiiiiiiilb",
+            "b                  b",
+            "bl<<<<<<<<<<<<<<<  b",
+            "b                  b",
+            "b   >>>>>>>>>>>>>>lb",
+            "b                  b",
+            "bl<<<<<<<<<<<b     b",
+            "b                  b",
+            "bllllllllbbbblllb  b",
+            "b                  b",
+            "bP         b       b",
+            "b         lb       b",
+            "b T^^T llblb      zb",
+            "bbbbbbbbbbbbbbbbbbbb",
+        ],
+    }, */ // Author: VelociBlueraptor
+    
+    /** GAME LEVELS **/
+    {
+        title : "Getting Started",
+        messages : ["Arrow Keys or WASD\nto move", "You can also use\n[SPACEBAR] to jump", "The portal takes\nyou to the next level"],
+        map : [
+            "bbbbbbbbbbbbbbbbbbbb",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "bP                 b",
+            "b                  b",
+            "bT  T        T  @  b",
+            "bbbbbbbbbbbbbbbbbbbb",
+        ],
+    },
+    {
+        title : "The Basics",
+        messages : ["...and lava", "Nice job! Finish the\nlevel to continue", "Make sure to avoid\nspikes...", "Try bulding up some\nmomentum", "Whew, that was a\nhard jump!", "Holding the jump key\nlonger lets you jump\nhigher", "Remember to hold\nthe UP/W key"],
+        map : [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "b                         b",
+            "b                         b",
+            "b                         b",
+            "b      T                  b",
+            "b     bbblllllb           b",
+            "b       bbbbbbb           b",
+            "bbb           b           b",
+            "b             bbbbbb T    b",
+            "b     bbb          bbbbb @b",
+            "b                      bbbb",
+            "bbb                       b",
+            "b          T              b",
+            "b      bbbbbb       bb    b",
+            "b^^^^^^b                  b",
+            "bbbbbbbb                 bb",
+            "bP     b T             T  b",
+            "b   b    bbb          bbbbb",
+            "b  Tbbbb bbb         Tbbbbb",
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        ],
+    },
+    {
+        title : "Special Blocks",
+        messages : ["Have fun!", "I won't be with you\nas often now", "You made it! Nice work", "Look, a tunnel", "Well, that was almost\na disaster", "Hmm, that looks sticky\nHow do I get across?", "Press 'R' to restart", "Nice, you figured it out", "Hmm, these look\nextremely springy"],
+        map : [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "b                      lllllb",
+            "b@   T   T    T          lllb",
+            "bbbbbbbbbbbbbbbbbb^       llb",
+            "b                bb^^     llb",
+            "b                 bbbbb    lb",
+            "b    >>>>>>>  ^       bb   lb",
+            "b  b          bbb T    bb   b",
+            "bT              bbbb    b   b",
+            "bb                 b^^  b   b",
+            "b                  bbbb bz  b",
+            "b  <<<<i      ii      b b   b",
+            "b                     b b   b",
+            "b               bbbbb b b   b",
+            "b                  b  b b  zb",
+            "b     T         b  b bb b   b",
+            "bP   bbbssssss  b  b  b b   b",
+            "b   bbbb        b  bb b     b",
+            "b  bbbbb T      bT    bT  z^b",
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        ],
+    },
+    {
+        title : "The Climb",
+        messages : [],
+        map : [
+            "bbbbbbbbbbbbbbbbbbbb",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b  b  ii           b",
+            "b  b               b",
+            "b  b          ii   b",
+            "b  b               b",
+            "b  b  bb           b",
+            "b  b               b",
+            "b  b          bb   b",
+            "b  b               b",
+            "b  b  <<           b",
+            "b  b               b",
+            "b  b          >>   b",
+            "b  b               b",
+            "b  b  bb           b",
+            "b@ b               b",
+            "bbbb          bb   b",
+            "b                  b",
+            "bP    bb           b",
+            "b                  b",
+            "bbbblllllllllllllllb",
+            "bbbbbbbbbbbbbbbbbbbb",
+        ],
+    },
+    {
+        title : "Side to Side",
+        messages : [],
+        map : [
+            "bbbbbbbbbbbbbbbbbbbb",
+            "b                  b",
+            "b@                 b",
+            "bbbb s             b",
+            "b    s     bbb     b",
+            "b    ssssssb      ^b",
+            "b               bbbb",
+            "b               s  b",
+            "b          bbbbss  b",
+            "b                  b",
+            "b  >>>>            b",
+            "b        ^         b",
+            "b        <<<<      b",
+            "b                  b",
+            "b                 bb",
+            "b                  b",
+            "bP     bbs   <bb   b",
+            "b   b              b",
+            "b       lllllll    b",
+            "bbbbbbbbbbbbbbbbbbbb",
+        ],
+    },
+    {
+        title : "Bouncy House",
+        messages : [],
+        map : [
+            "bbbbbbbbbbbbbbbbbbbb",
+            "b                  b",
+            "b                  b",
+            "b                  b",
+            "b       ss         b",
+            "b      ss          b",
+            "b     ss           b",
+            "b  b ss         z  b",
+            "b  b               b",
+            "bb b               b",
+            "b  b               b",
+            "b bb            z  b",
+            "b @b               b",
+            "bbbb               b",
+            "b                  b",
+            "b               z  b",
+            "b        ll        b",
+            "bP      llll       b",
+            "b      llllll      b",
+            "bzzb  llllllll  bzzb",
+            "bbbbssssssssssssbbbb",
+        ],
+    },
+    {
+        title : "Strafe Jumps",
+        messages : [],
+        map : [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "b                         b",
+            "b                        @b",
+            "b   bbbbbbbbbbbbbbbbbbbbbbb",
+            "b      lll                b",
+            "b   bbbbbbbbbbbbbbbbbbbbbbb",
+            "b      lll                b",
+            "b   bbbbbbbbbbbbbbbbbbbbbbb",
+            "b      lll                b",
+            "b   bbbbbbbbbbbbbbbbbbbbbbb",
+            "b      lll                b",
+            "b   bbbbbbbbbbbbbbbbbbbbbbb",
+            "b      lll                b",
+            "b   bbbbbbbbbbbbbbbbbbbbbbb",
+            "b      lll                b",
+            "b   bbbbbbbbbbbbbbbbbbbbbbb",
+            "b      lll                b",
+            "b   bbbbbbbbbbbbbbbbbbbbbbb",
+            "b      lll                b",
+            "b   bbbbbbbbbbbbbbbbbbbbbbb",
+            "b      lll                b",
+            "b   bbbbbbbbbbbbbbbbbbbbbbb",
+            "b      lll                b",
+            "b   bbbbbbbbbbbbbbbbbbbbbbb",
+            "bP     lll                b",
+            "b   bbbbbbbbbbbbbbbbbbbbbbb",
+            "b      lll                b",
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        ],
+    },
+    {
+        title : "Go With the Flow",
+        messages : [],
+        map : [
+            "bbbbbbbbbbbbbbbbbbbbbb",
+            "b                    b",
+            "b                    b",
+            "b  bbbbbbbbbbbbbbbbb b",
+            "b                  b b",
+            "bbbbb<<<<<<<< i    b b",
+            "b                  b b",
+            "b                 bb b",
+            "b                  b b",
+            "b       i     i   lb b",
+            "b                llb b",
+            "b                bbb b",
+            "b                b   b",
+            "bz               b   b",
+            "bb      i     i  b   b",
+            "bbssssssbsssssb  b   b",
+            "bbbbbbbbb     b  b  ^b",
+            "b   bb       ll  b  bb",
+            "bP         >>>>zzb   b",
+            "b    lll<<<<bbbbbb   b",
+            "b       <bbbb        b",
+            "b>>>zz<<<bl@       ^^b",
+            "bbbbbbbbbbbbbbbbbbbbbb",
+        ],
+    },
+    {
+        title : "Good Luck",
+        messages : [],
+        map : [
+            "bbbbbbbbbbbbbbbbbbbb",
+            "bP        bb       b",
+            "b          b     b b",
+            "bbbbbzz    b     b b",
+            "b    bb       >llb b",
+            "b b   b       bbbb b",
+            "b b  bb     bbb    b",
+            "b b   bsssssb      b",
+            "b b  bbbbbbbb  <<<<b",
+            "b b        lb      b",
+            "b b  bb     b>>>>  b",
+            "b b^^b             b",
+            "b bbbb           llb",
+            "b    b     zz<<<bbbb",
+            "bbbb b     bbbbbb  b",
+            "b    b^^^^^b       b",
+            "b bbbbbbbbbb       b",
+            "b llllllllll       b",
+            "b                ^^b",
+            "bbbbbbzbbbbb   bbbbb",
+            "bbbbbbbbbbbb  ^bbbbb",
+            "b  @          bbbbbb",
+            "bbbbbbbbbbbbbbbbbbbb",
+        ],
+    },
+];
+//}
+// -- Level Function -- {
+function loadLevel (lvlObj) {
+    var 
+        levelBlocks = [], 
+        damagingBlocks = [], 
+        resetPos = [], 
+        currMessage = 0;
+    
+    for(var i = 0; i < lvlObj.map.length; i ++){
+      for(var j = 0; j < lvlObj.map[i].length; j ++){
+        var currBlockType = null;
+        switch (lvlObj.map[i].charAt(j)){
+          case 'P':
+            player.x = player.x || j * 30 + 2;
+            resetPos[0] = j * 30 + 2;
+            player.y = player.y || i * 30 + 0;
+            resetPos[1] = i * 30 + 0;
+          break;
+          case 'b':
+            currBlockType = block__.basic;
+          break;
+          case 's':
+            currBlockType = block__.sticky;
+          break;
+          case 'l':
+            currBlockType = block__.lava;
+          break;
+          case '^':
+            currBlockType = block__.spike;
+          break;
+          case '@':
+            currBlockType = block__.portal;
+          break;
+          case 'T':
+            currBlockType = block__.sign;
+          break;
+          case 'i':
+            currBlockType = block__.ice;
+          break;
+          case 'z':
+            currBlockType = block__.bouncy;
+          break;
+          case '>':
+            currBlockType = block__.rspeed;
+          break;
+          case '<':
+            currBlockType = block__.lspeed;
+          break;
+        }
+        if(!currBlockType){
+          continue;
+        }
+        if(currBlockType === block__.spike ||
+        currBlockType === block__.lava){
+          damagingBlocks.push(
+            new__.call(currBlockType, {
+              x : j * 30,
+              y : i * 30,
+            })
+          );
+          continue;
+        }
+        levelBlocks.push(
+          new__.call(currBlockType, {
+            x : j * 30,
+            y : i * 30,
+          })
+        );
+      }
+    }
+    var xVal = 0;
+    for(var i = 0; i < lvlObj.map.length; i ++){
+        if(lvlObj.map[i].length > lvlObj.map[xVal].length){
+            xVal = i;
+        }
+    }
+    camX = 300 - player.x;
+    camX = constrain(camX, 
+      -((lvlObj.map[xVal].length - 20) * 30), 0
+    );
+    camY = 300 - player.y;
+    camY = constrain(camY, 
+      -((lvlObj.map.length - 20) * 30), 0
+    );
+    pushMatrix();
+    translate(camX, camY);
+    for(var i = 0; i < levelBlocks.length; i ++){
+      var currBlock = levelBlocks[i];
+      currBlock.draw();
+      if(currBlock.blockType === 'sign'){
+        currBlock.message = lvlObj.messages[currMessage];
+        currMessage++;
+      }
+    }
+    for(var i = 0; i < damagingBlocks.length; i ++){
+      damagingBlocks[i].draw();
+    }
+    player.draw();
+    if(opac < 50){
+        player.move();
+    }
+    popMatrix();
+    healthbar(player.health);
+    var collidedWithPortal = false, collidedWithSpeed = false;
+    for(var i = 0; i < levelBlocks.length; i ++){
+      if(rrCol(player, levelBlocks[i])){
+        if(levelBlocks[i].blockType === 'portal'){
+          collidedWithPortal = true;
+        }
+        if(levelBlocks[i].blockType === 'rspeed' ||
+        levelBlocks[i].blockType === 'lspeed'){
+          collidedWithSpeed = true;
+        }
+      }
+      player.collide(levelBlocks[i]);
+    }
+    for(var i = 0; i < damagingBlocks.length; i ++){
+      player.collide(damagingBlocks[i]);
+    }
+    if(!collidedWithPortal){
+      portalTrans.opac = 0;
+    }
+    if(!collidedWithSpeed){
+      player.forceRight = false;
+      player.forceLeft = false;
+    }
+    if(player.health <= 0 || restarted){
+      player.health = 100;
+      player.reset(resetPos);
+      deaths ++;
+    }
+    if(opac > 0){
+        opac -= 2;
+    }
+    noStroke();
+    fill(255, opac);
+    rect(0, 0, 600, 600);
+    if(opac < 290){
+        fill(0, opac);
+        textAlign(CENTER, CENTER);
+        textFont(createFont("Trebuchet MS"), 60);
+        text(lvlObj.title, 300, 300);
+    } else {
+        noStroke();
+        fill(255);
+        rect(0, 0, 600, 600);
+    }
+}
+//}
+// -- Win Function -- {
+function win () {
+    thumbnail();
+    noStroke();
+    fill(0, 150);
+    rect(0, 0, width, height);
+    textAlign(CENTER, CENTER);
+    textFont(createFont("Trebuchet MS"), 90);
+    fill(255);
+    text("You won!", 300, 245);
+    textSize(50);
+    textAlign(LEFT, BOTTOM);
+    text("Time: ", 100, 360);
+    text("Deaths: ", 100, 420);
+    textAlign(RIGHT, BOTTOM);
+    text(totalSec, 510, 360);
+    text(deaths, 510, 420);
+}
+//}
+// -- Main Loop -- {
+draw = function() {
+    try {
+        switch (scene) {
+            case 'load':
+                Graphics.loadNext();
+                background(255);
+                noFill();
+                stroke(0);
+                strokeWeight(10);
+                arc(300, 300, 300, 300, 0, (imgsLoaded/imgsTotal) * 360);
+            break;
+            case 'game':
+                background(255);
+                if(levelNum < (levels.length + 1)){
+                    loadLevel(levels[(levelNum - 1)]);
+                } else {
+                    scene = 'win';
+                }
+                if(frameCount % 60 === 0){
+                    totalSec ++ ;
+                }
+            break;
+            case 'win':
+                win();
+            break;
+            case 'thumb':
+                thumbnail();
+            break;
+        }
+        restarted = false;
+    } catch (e) {
+        _clearLogs();
+        println(e);
+        println("\nRestarting should fix the problem. Sorry for the inconvenience.\nCommand+F and search `levelNum` to go back to your level after restarting.");
+    }
+};
+//}
+
